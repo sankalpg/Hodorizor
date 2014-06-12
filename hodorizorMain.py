@@ -101,8 +101,10 @@ def hodorFileSelection(karaokeData, toneMapp):
 
 		if elem['syl'] == '-':
 			continue
-
-		karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['hodor'][np.mod(elem['tone'],12)][0] + ".wav")
+		if elem['end'] - elem['start'] > 0.3:
+			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['hodor'][np.mod(elem['tone'],12)][0] + ".wav")
+		else:
+			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['ho'][np.mod(elem['tone'],12)][0] + ".wav")
 		"""
 		if ii%2 == 0:
 			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['ho'][np.mod(elem['tone'],12)][0] + ".wav")
