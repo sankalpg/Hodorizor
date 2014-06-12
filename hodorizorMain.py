@@ -11,6 +11,32 @@ import sineModel as SM
 import sineTransformations as trans
 import karaokeParser as KP
 
+root_HodorPath = "HodorSounds"
+toneMappFile = "toneMapping.csv"
+
+def createToneMappFiles(mappFile):
+
+	lines = open(mappFile, 'r').readlines()
+
+	toneMapp={}
+	toneMapp['hodor'] = [[] for x in range(12)]
+	toneMapp['ho'] = [[] for x in range(12)]
+	toneMapp['dor'] = [[] for x in range(12)]
+
+	for line in lines:
+		lineSplt = line.split()
+		basename = lineSplt[0].strip()
+		num1 = lineSplt[1].strip()
+		num2 = lineSplt[2].strip()
+		num1 = int(num1)
+		num2 = int(num2)
+		toneMapp['hodor'][num1].append(basename)
+		toneMapp['ho'][num1].append(basename+"_ho")
+		toneMapp['dor'][num2].append(basename + "_dor")
+
+	return toneMapp
+
+
 
 def timeStretchAudio(inputAudio, outputAudio, outputDuration, writeOutput=1):
 
@@ -69,12 +95,20 @@ def generateHodorTrack(emptyTrack, fs, karaokeData, repMTX):
 
 	return emptyTrack
 
-def hodorFileSelection(karaokeData):
+def hodorFileSelection(karaokeData, toneMapp):
 
 	for ii, elem in enumerate(karaokeData['data']):
 
-		karaokeData['data'][ii]['file'] = "HodorSounds/clean5.wav"
+		if elem['syl'] == '-':
+			continue
 
+		karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['hodor'][np.mod(elem['tone'],12)][0] + ".wav")
+		"""
+		if ii%2 == 0:
+			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['ho'][np.mod(elem['tone'],12)][0] + ".wav")
+		else:
+			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['dor'][np.mod(elem['tone'],12)][0] + ".wav")
+		"""
 
 	return karaokeData
 
@@ -136,8 +170,11 @@ def hodorifyIt(inputFile, outputFile, karaokeExt = '.txt'):
 	for ii,elem in enumerate(karaokeData['data']):
 		karaokeData['data'][ii]['processed']=0
 
+	#creating mapping between file names and tones
+	toneMapp = createToneMappFiles(toneMappFile)
+
 	#processHere the logic for Hodor input file for each word
-	karaokeData = hodorFileSelection(karaokeData)
+	karaokeData = hodorFileSelection(karaokeData, toneMapp)
 
 	#do center channel cut
 	audio = cutCenterChannel(audio, fs, karaokeData)
