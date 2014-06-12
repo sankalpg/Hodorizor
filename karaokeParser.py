@@ -20,6 +20,9 @@ def parseKaraokeFile(karaokeTxtFile):
 	Offset = -1
 	durPBeat = -1
 
+	sumTones=0
+	cntTones=0
+
 	for line in lines:
 		if line.startswith("E"):
 			break
@@ -47,10 +50,12 @@ def parseKaraokeFile(karaokeTxtFile):
 		if len(lineSplt) == 5: #normal frame
 			start_time = Offset + float(lineSplt[1])*durPBeat
 			end_time = start_time + float(lineSplt[2])*durPBeat
+			sumTones+=int(lineSplt[3])
+			cntTones+=1
 			fileContent['data'].append({'type': lineSplt[0], 'start': start_time, 'end': end_time, 'tone':int(lineSplt[3]), 'syl':lineSplt[4], 'durBeats':int(lineSplt[2])})		
 		else:
 			if lineSplt[0] == '-':
-				fileContent['data'].append({'type': lineSplt[0], 'start': -1, 'end': -1, 'tone':-1, 'syl':'-'})
+				fileContent['data'].append({'type': lineSplt[0], 'start': -1, 'end': -1, 'tone': None, 'syl':'-'})
 			else:
 				print line
 				print "This is something really wierd happening here X1"
@@ -65,6 +70,13 @@ def parseKaraokeFile(karaokeTxtFile):
 	#print Offset, durPBeat
 	#print fileContent
 	#dumpSonicVisualizerAnnotFile('Test.txt', fileContent['data'])
+
+	#sometimes tones are in correct midi format and sometimes they have a wierd format of 0 being some C. detecting this automatically
+	if float(sumTones)/float(cntTones) < 35:
+		for ii,elem in enumerate(fileContent['data']):
+			if not elem['tone'] is None:
+				fileContent['data'][ii]['tone']+=60
+
 	return fileContent
 
 def dumpSonicVisualizerAnnotFile(fileOut, data):

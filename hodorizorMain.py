@@ -48,15 +48,24 @@ def timeStretchAudio(inputAudio, outputAudio, outputDuration, writeOutput=1):
 		return y, fs, nChannel
 
 
-def generateHodorTrack(emptyTrack, fs, karaokeData):
+def generateHodorTrack(emptyTrack, fs, karaokeData, repMTX):
 
 	for ii, elem in enumerate(karaokeData['data']):
 
-		duration = elem['end'] - elem['start']
-		audio, fs, nChannel = timeStretchAudio(elem['file'], "crap.crap", duration, writeOutput=0)
+		if elem['syl'] == '-':
+			continue
 
-		sample1 = np.round(elem['start']*fs).astype(np.int)
-		emptyTrack[sample1:sample1 + len(audio)] +=  audio
+		if elem['processed']==0:#process only when its already not processed
+			mtxInd = (elem['durBeats'], elem['tone'])
+
+			duration = elem['end'] - elem['start']
+			audio, fs, nChannel = timeStretchAudio(elem['file'], "crap.crap", duration, writeOutput=0)
+
+			for index in repMTX[mtxInd[0]][mtxInd[1]]:
+
+				sample1 = np.round(karaokeData['data'][index]['start']*fs).astype(np.int)
+				emptyTrack[sample1:sample1 + len(audio)] +=  audio
+				karaokeData['data'][index]['processed'] = 1 
 
 	return emptyTrack
 
@@ -82,6 +91,30 @@ def cutCenterChannel(audio, fs, karaokeData):
 	return audio
 
 
+def estimateRepetitiveHodors(karaokeData):
+
+	repMTX = np.empty((100,100)).tolist()#dur,tone
+
+	totalHodors = 0
+	totalProcessHodors = 0
+
+	for ii in range(100):
+		for jj in range(100):
+			repMTX[ii][jj]=[]
+
+	for ii,elem in enumerate(karaokeData['data']):
+		if not elem['syl'] == '-':
+			repMTX[elem['durBeats']][elem['tone']].append(ii)
+			totalHodors+=1
+
+	for ii in range(100):
+		for jj in range(100):
+			if len(repMTX[ii][jj])>0:
+				totalProcessHodors+=1
+
+	print "I have to process %d hodors out of %d hodors"%(totalProcessHodors, totalHodors)
+
+	return repMTX
 
 def hodorifyIt(inputFile, outputFile, karaokeExt = '.txt'):
 
@@ -95,7 +128,13 @@ def hodorifyIt(inputFile, outputFile, karaokeExt = '.txt'):
 	fname, ext = os.path.splitext(inputFile)
 	karaokeFile  = fname + karaokeExt
 
+	#parse the karaoke file
 	karaokeData = KP.parseKaraokeFile(karaokeFile)
+
+	#initialize all the hodor locations with not processed flag (later to be for exploiting repetitive hodors)
+
+	for ii,elem in enumerate(karaokeData['data']):
+		karaokeData['data'][ii]['processed']=0
 
 	#processHere the logic for Hodor input file for each word
 	karaokeData = hodorFileSelection(karaokeData)
@@ -103,9 +142,12 @@ def hodorifyIt(inputFile, outputFile, karaokeExt = '.txt'):
 	#do center channel cut
 	audio = cutCenterChannel(audio, fs, karaokeData)
 
+	#estimate the possible repetitions in the karaoke data, i.e. output with same note and duration
+	print len(karaokeData['data'])
+	repMTX = estimateRepetitiveHodors(karaokeData)
 
 	emptyTrack  = np.zeros(len(audio))
-	emptyTrack = generateHodorTrack(emptyTrack, fs, karaokeData)
+	emptyTrack = generateHodorTrack(emptyTrack, fs, karaokeData, repMTX)
 
 	audio[:,1] = audio[:,1] + emptyTrack
 	audio[:,0] = audio[:,0] + emptyTrack
@@ -113,7 +155,6 @@ def hodorifyIt(inputFile, outputFile, karaokeExt = '.txt'):
 	outputWav = Sndfile(outputFile, 'w', inputAudio.format, inputAudio.channels, inputAudio.samplerate)
 	outputWav.write_frames(audio)
 	outputWav.close()
-
 
 
 if __name__ == "__main__":
