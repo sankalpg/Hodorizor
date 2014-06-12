@@ -47,7 +47,7 @@ def parseKaraokeFile(karaokeTxtFile):
 		if len(lineSplt) == 5: #normal frame
 			start_time = Offset + float(lineSplt[1])*durPBeat
 			end_time = start_time + float(lineSplt[2])*durPBeat
-			fileContent['data'].append({'type': lineSplt[0], 'start': start_time, 'end': end_time, 'tone':int(lineSplt[3]), 'syl':lineSplt[4]})		
+			fileContent['data'].append({'type': lineSplt[0], 'start': start_time, 'end': end_time, 'tone':int(lineSplt[3]), 'syl':lineSplt[4], 'durBeats':int(lineSplt[2])})		
 		else:
 			if lineSplt[0] == '-':
 				fileContent['data'].append({'type': lineSplt[0], 'start': -1, 'end': -1, 'tone':-1, 'syl':'-'})
@@ -64,7 +64,8 @@ def parseKaraokeFile(karaokeTxtFile):
 
 	#print Offset, durPBeat
 	#print fileContent
-	dumpSonicVisualizerAnnotFile('Test.txt', fileContent['data'])
+	#dumpSonicVisualizerAnnotFile('Test.txt', fileContent['data'])
+	return fileContent
 
 def dumpSonicVisualizerAnnotFile(fileOut, data):
 	
@@ -89,21 +90,6 @@ def parseTagLine(tagline):
 			return tag, content
 
 	raise MyError("InvalidTag")
-
-
-
-
-
-
-
-#TITLE:Liebeslied
-#ARTIST:Bodo Wartke
-#LANGUAGE:English
-#MP3:Bodo Wartke - Liebeslied.mp3
-#COVER:Bodo Wartke - Liebeslied [CO].jpg
-#BACKGROUND:Bodo Wartke - Liebeslied [BG].jpg
-#BPM:313,7
-#GAP:14330	
 
 
 if __name__ == "__main__":
