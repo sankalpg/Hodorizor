@@ -86,6 +86,8 @@ def generateHodorTrack(emptyTrack, fs, karaokeData, repMTX):
 			mtxInd = (elem['durBeats'], elem['tone'])
 
 			duration = elem['end'] - elem['start']
+			if duration < 0.4:
+				continue
 			audio, fs, nChannel = timeStretchAudio(elem['file'], "crap.crap", duration, writeOutput=0)
 
 			for index in repMTX[elem['sylType']][mtxInd[0]][mtxInd[1]]:
@@ -103,7 +105,7 @@ def hodorFileSelection(karaokeData, toneMapp):
 		if elem['syl'] == '-':
 			continue
 
-		karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , "Clean5" + ".wav")
+		karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , "Clean" + str(np.mod(ii,10)+1)+ ".wav")
 
 		"""
 		tone = elem['tone']-12
@@ -140,9 +142,10 @@ def cutCenterChannel(audio, fs, karaokeData):
 			sample1 = np.round(elem['start']*fs).astype(np.int)
 			sample2 = np.round(elem['end']*fs).astype(np.int)
 			diffChannel = audio[sample1:sample2,1]-audio[sample1:sample2,0]
-			audio[sample1:sample2,1] = diffChannel
-			audio[sample1:sample2,0] = diffChannel
+			audio[sample1:sample2,1] = diffChannel*1.5
+			audio[sample1:sample2,0] = diffChannel*1.5
 
+	audio = audio*0.8
 	return audio
 
 
