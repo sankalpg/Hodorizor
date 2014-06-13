@@ -11,7 +11,8 @@ import sineModel as SM
 import sineTransformations as trans
 import karaokeParser as KP
 
-root_HodorPath = "HodorSounds"
+root_HodorPath = "HodorSoundsAll"
+baseHodorName = "HodorSounds/Hodor1"
 toneMappFile = "toneMapping.csv"
 
 def createToneMappFiles(mappFile):
@@ -87,7 +88,7 @@ def generateHodorTrack(emptyTrack, fs, karaokeData, repMTX):
 			duration = elem['end'] - elem['start']
 			audio, fs, nChannel = timeStretchAudio(elem['file'], "crap.crap", duration, writeOutput=0)
 
-			for index in repMTX[mtxInd[0]][mtxInd[1]]:
+			for index in repMTX[elem['sylType']][mtxInd[0]][mtxInd[1]]:
 
 				sample1 = np.round(karaokeData['data'][index]['start']*fs).astype(np.int)
 				emptyTrack[sample1:sample1 + len(audio)] +=  audio
@@ -101,10 +102,28 @@ def hodorFileSelection(karaokeData, toneMapp):
 
 		if elem['syl'] == '-':
 			continue
+
+		karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , "Clean5" + ".wav")
+
+		"""
+		tone = elem['tone']-12
+		toneDiff = tone - 53
+		if abs(toneDiff) > 24:
+			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , "Hodor1" + ".wav")
+			continue
+		if toneDiff > 0:
+			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , "Hodor1" + "P" + str(toneDiff) + "_" + elem['sylType'] + ".wav")
+		if toneDiff < 0:
+			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , "Hodor1" + "M" + str(abs(toneDiff)) + "_" + elem['sylType'] + ".wav")
+		if toneDiff  == 0:
+			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , "Hodor1" + "_" + elem['sylType'] + ".wav")
+		"""
+		"""
 		if elem['end'] - elem['start'] > 0.3:
 			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['hodor'][np.mod(elem['tone'],12)][0] + ".wav")
 		else:
 			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['ho'][np.mod(elem['tone'],12)][0] + ".wav")
+		"""
 		"""
 		if ii%2 == 0:
 			karaokeData['data'][ii]['file'] = os.path.join(root_HodorPath , toneMapp['ho'][np.mod(elem['tone'],12)][0] + ".wav")
@@ -129,23 +148,29 @@ def cutCenterChannel(audio, fs, karaokeData):
 
 def estimateRepetitiveHodors(karaokeData):
 
-	repMTX = np.empty((100,100)).tolist()#dur,tone
+	repMTX_s = np.empty((100,100)).tolist()#dur,tone
 
 	totalHodors = 0
 	totalProcessHodors = 0
 
 	for ii in range(100):
 		for jj in range(100):
-			repMTX[ii][jj]=[]
+			repMTX_s[ii][jj]=[]
+
+	repMTX = {}
+	repMTX['ho'] = repMTX_s
+	repMTX['dor'] = repMTX_s
 
 	for ii,elem in enumerate(karaokeData['data']):
 		if not elem['syl'] == '-':
-			repMTX[elem['durBeats']][elem['tone']].append(ii)
+			repMTX[elem['sylType']][elem['durBeats']][elem['tone']].append(ii)
 			totalHodors+=1
 
 	for ii in range(100):
 		for jj in range(100):
-			if len(repMTX[ii][jj])>0:
+			if len(repMTX['ho'][ii][jj])>0:
+				totalProcessHodors+=1
+			if len(repMTX['dor'][ii][jj])>0:
 				totalProcessHodors+=1
 
 	print "I have to process %d hodors out of %d hodors"%(totalProcessHodors, totalHodors)
@@ -167,8 +192,20 @@ def hodorifyIt(inputFile, outputFile, karaokeExt = '.txt'):
 	#parse the karaoke file
 	karaokeData = KP.parseKaraokeFile(karaokeFile)
 
-	#initialize all the hodor locations with not processed flag (later to be for exploiting repetitive hodors)
 
+	#assign which syllable to use ho and which ones to use dor
+	toogle = 0
+	sylType = ['ho', 'dor']
+	for ii,elem in enumerate(karaokeData['data']):
+		if elem['syl'] == '-':
+			toogle =0
+			continue
+		karaokeData['data'][ii]['sylType'] = sylType[toogle]
+		toogle = (toogle +1)%2
+
+	dumpSonicVisualizerAnnotFile("tryHODOR.txt", karaokeData['data'])
+
+	#initialize all the hodor locations with not processed flag (later to be for exploiting repetitive hodors)
 	for ii,elem in enumerate(karaokeData['data']):
 		karaokeData['data'][ii]['processed']=0
 
@@ -194,6 +231,18 @@ def hodorifyIt(inputFile, outputFile, karaokeExt = '.txt'):
 	outputWav = Sndfile(outputFile, 'w', inputAudio.format, inputAudio.channels, inputAudio.samplerate)
 	outputWav.write_frames(audio)
 	outputWav.close()
+
+def dumpSonicVisualizerAnnotFile(fileOut, data):
+	
+	fid = open(fileOut, "w")
+
+	for elem in data:
+		if elem['syl'] == '-':
+			fid.write("%f\t%f\t%s\n"%(elem['start'], elem['end'], '-'))
+		else:
+			fid.write("%f\t%f\t%s\n"%(elem['start'], elem['end'], elem['sylType']))
+
+	fid.close()
 
 
 if __name__ == "__main__":

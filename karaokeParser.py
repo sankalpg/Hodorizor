@@ -69,7 +69,7 @@ def parseKaraokeFile(karaokeTxtFile):
 
 	#print Offset, durPBeat
 	#print fileContent
-	#dumpSonicVisualizerAnnotFile('Test.txt', fileContent['data'])
+	dumpSonicVisualizerAnnotFile('Test.txt', fileContent['data'])
 
 	#sometimes tones are in correct midi format and sometimes they have a wierd format of 0 being some C. detecting this automatically
 	if float(sumTones)/float(cntTones) < 35:
